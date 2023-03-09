@@ -128,7 +128,7 @@ class CraftyWeb:
 
         return self._make_request('GET', APIRoutes.ROLES_URL)['data']
 
-    def create_role(self, name, server_ids, permissions):
+    def create_role(self, name, server_ids, permissions, manager):
         """
         Create a new role.
 
@@ -142,21 +142,23 @@ class CraftyWeb:
             indicates it is denied. For example, the string '101110010' would grant permissions for commands, logs,
             schedule, files, and players, but deny permissions for terminal, backup, and config.
         :type permissions: str | int
+        :param manager: The manager of the new role.
+        :type: int | str
         :return: A dictionary containing the response from the server.
         :rtype: dict
         """
         if isinstance(server_ids, (int, str)):
             server_ids = [server_ids]
-        elif isinstance(server_ids, list):
-            pass
-        else:
-            raise TypeError(f'"server_ids" must be of type list[int], instead received type {type(server_ids)}')
+        elif not isinstance(server_ids, list):
+            raise TypeError(f"'server_ids' must either be of type int or a list of int instead was of type "
+                            f"{type(server_ids)}")
 
         servers = [
             {'server_id': int(server_id), 'permissions': str(permissions)} for server_id in server_ids]
         data = {
             'name': name,
-            'servers': servers
+            'servers': servers,
+            # 'manager': int(manager)
         }
 
         return self._make_request('POST', APIRoutes.ROLES_URL, data=data)
@@ -263,7 +265,7 @@ class CraftyWeb:
         if (server_ids is None and permissions is not None) or (server_ids is not None and permissions is None):
             raise ValueError("Both 'server_ids' and 'permissions' must be either provided or None.")
         elif server_ids is not None and permissions is not None:
-            if isinstance(server_ids, int):
+            if isinstance(server_ids, (int, str)):
                 server_ids = [server_ids]
             elif not isinstance(server_ids, list):
                 raise TypeError(f"'server_ids' must either be of type int or a list of int instead was of type "
@@ -531,16 +533,16 @@ class CraftyWeb:
         url = f'{APIRoutes.SERVERS_URL}/{server_id}/users'
 
         # TODO: Add this:
-        # users = self._make_request('GET', url)['data']
-        #
-        # user_dict = {}
-        # for user in users:
-        #     user_data = self.get_user(user)
-        #     user_dict[user_data['id']] = user_data['username']
-        #
-        # return user_dict
+        users = self._make_request('GET', url)['data']
 
-        return self._make_request('GET', url)['data']
+        user_dict = {}
+        for user in users:
+            user_data = self.get_user(user)
+            user_dict[user_data['user_id']] = user_data['username']
+
+        return user_dict
+
+        # return self._make_request('GET', url)['data']
 
     # TODO: Complete this and the next
     def create_schedule(self, server_id, data):
