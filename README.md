@@ -8,7 +8,7 @@ It was written from scratch and is based on requests.
 
 ## Install
 ## CRAFTY CLIENT IS NOT READY FOR INSTALL VIA PIP YET
-{::comment}
+<!---
 Make sure you have python3 installed on your system with the pip package manager.
 
 #### For windows (conda) environments
@@ -20,7 +20,7 @@ pip install crafty-client
 ```bash
 pip3 install crafty-client
 ```
-{:/comment}
+--->
 ## Usage
 
 Example:
