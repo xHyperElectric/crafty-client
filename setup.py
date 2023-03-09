@@ -11,7 +11,7 @@ setup(
      long_description=long_description,
      long_description_content_type="text/markdown",
      author='xHyperElectric',
-     url='https://gitlab.com/crafty-controller/crafty-client',
+     # url='https://gitlab.com/crafty-controller/crafty-client',
      install_requires=['requests'],
      packages=['crafty_client', 'crafty_client.static']
 )
