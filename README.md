@@ -4,7 +4,7 @@
 
 Crafty Client is a pypi (pip) package for interfacing with the [Crafty Web MC server control panel](https://gitlab.com/crafty-controller/crafty-web).
 
-It was written from scratch and is based on requests and urllib3, by [kevdagoat](https://gitlab.com/kevdagoat)
+It was written from scratch and is based on requests.
 
 ## Install
 
@@ -29,7 +29,7 @@ from crafty_client import CraftyWeb
 URL = "https://127.0.0.1:8000"    # The location of the crafty-web webserver
 API_TOKEN = "<place token here>"  # Your crafty Web API token, printed in the console at installation.
 
-cweb = CraftyWeb(URL, API_TOKEN)
+crafty = CraftyWeb(URL, API_TOKEN)
 
-print(cweb.list_mc_servers())
+print(crafty.get_all_servers())
 ```
