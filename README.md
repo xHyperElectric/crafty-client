@@ -2,12 +2,13 @@
 
 ## About
 
-Crafty Client is a pypi (pip) package for interfacing with the [Crafty Web MC server control panel](https://gitlab.com/crafty-controller/crafty-web).
+Crafty Client is a pypi (pip) package for interfacing with the [Crafty Web MC server control panel](https://gitlab.com/crafty-controller/crafty-4).
 
 It was written from scratch and is based on requests.
 
 ## Install
-
+## CRAFTY CLIENT IS NOT READY FOR INSTALL VIA PIP YET
+<!---
 Make sure you have python3 installed on your system with the pip package manager.
 
 #### For windows (conda) environments
@@ -19,7 +20,7 @@ pip install crafty-client
 ```bash
 pip3 install crafty-client
 ```
-
+-->
 ## Usage
 
 Example:
