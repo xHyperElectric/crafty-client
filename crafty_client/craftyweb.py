@@ -1,5 +1,4 @@
 import requests
-from urllib.parse import urljoin
 
 from crafty_client.static.exceptions import *
 from crafty_client.static.routes import APIRoutes
@@ -38,7 +37,7 @@ class CraftyWeb:
             pass
 
     def _make_request(self, method, api_route, params=None, data=None):
-        endpoint = urljoin(self.url, api_route)
+        endpoint = f'{self.url}{api_route}'
 
         with requests.request(method, endpoint, 
                               verify=self.verify_ssl, headers=self.headers, params=params, json=data) as route:
