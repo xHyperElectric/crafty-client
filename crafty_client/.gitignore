@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+key.dat
+token.dat
+password.txt
+main.py
