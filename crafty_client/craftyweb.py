@@ -896,7 +896,7 @@ class CraftyWeb:
 
     # Test Functions
 
-    # For testing purposes
+    # Designed for testing purposes
     def test_foo(self, method, url, data=None):
         return self._make_request(method, url, data=data)
 
