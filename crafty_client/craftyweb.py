@@ -7,12 +7,14 @@ from crafty_client.static.routes import APIRoutes
 
 class CraftyWeb:
 
-    def __init__(self, url, api_token, verify_ssl=False):
+    def __init__(self, url, api_token, verify_ssl=False, response_statements=False, debug=False):
         """ The main class for communicating with the Crafty Web API"""
         self.url = url
         self.token = api_token
         self.verify_ssl = verify_ssl
         self.headers = {'Authorization': f'Bearer {self.token}', 'Content-Type': 'application/json'}
+        self.debug = debug
+        self.response_statements = response_statements
 
     # TODO: Verify all these errors still exist (mostly copied from API V1)
     def _check_errors(self, response_dict):
@@ -42,9 +44,11 @@ class CraftyWeb:
 
         with requests.request(method, endpoint, verify=self.verify_ssl, headers=self.headers, params=params,
                               json=data, data=not_json) as route:
-            print(f'Debug: \n{route.text}')
+            if self.debug:
+                print(f'Debug: \n{route.text}')
             response_dict = route.json()
-            print(response_dict)
+            if self.response_statements:
+                print(response_dict)
 
             status = response_dict.get('status', None)
             data = response_dict.get('data', None)
@@ -584,7 +588,6 @@ class CraftyWeb:
         url = f'{APIRoutes.SERVERS_URL}/{server_id}/stats'
         return self._make_request('GET', url)['data']
 
-    # TODO: Seemingly Broken
     def get_server_users(self, server_id):
         """
         Retrieves all the users with access to the server corresponding to the specified server ID.
@@ -610,8 +613,6 @@ class CraftyWeb:
             user_dict[user_data['user_id']] = user_data['username']
 
         return user_dict
-
-        # return self._make_request('GET', url)['data']
 
     # TODO: Complete this and the next
     def create_schedule(self, server_id, data):
