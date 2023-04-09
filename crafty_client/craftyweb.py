@@ -1,4 +1,5 @@
 import requests
+import json
 
 from crafty_client.static.exceptions import *
 from crafty_client.static.routes import APIRoutes
@@ -36,11 +37,11 @@ class CraftyWeb:
         else:
             pass
 
-    def _make_request(self, method, api_route, params=None, data=None):
+    def _make_request(self, method, api_route, params=None, data=None, not_json=None):
         endpoint = f'{self.url}{api_route}'
 
-        with requests.request(method, endpoint, 
-                              verify=self.verify_ssl, headers=self.headers, params=params, json=data) as route:
+        with requests.request(method, endpoint, verify=self.verify_ssl, headers=self.headers, params=params,
+                              json=data, data=not_json) as route:
             print(f'Debug: \n{route.text}')
             response_dict = route.json()
             print(response_dict)
@@ -151,14 +152,14 @@ class CraftyWeb:
             server_ids = [server_ids]
         elif not isinstance(server_ids, list):
             raise TypeError(f"'server_ids' must either be of type int or a list of int instead was of type "
-                            f"{type(server_ids)}")
+                            f"{type(server_ids).__name__}")
 
         servers = [
             {'server_id': int(server_id), 'permissions': str(permissions)} for server_id in server_ids]
         data = {
             'name': name,
             'servers': servers,
-            # 'manager': int(manager)
+            'manager': int(manager)
         }
 
         return self._make_request('POST', APIRoutes.ROLES_URL, data=data)
@@ -174,7 +175,7 @@ class CraftyWeb:
         """
 
         if not isinstance(role_id, (int, str)):
-            raise TypeError(f'Expected "role_id" to be of type int or str, but got {type(role_id)} instead')
+            raise TypeError(f'Expected "role_id" to be of type int or str, but got {type(role_id).__name__} instead')
 
         url = f'{APIRoutes.ROLES_URL}/{role_id}'
         return self._make_request('GET', url)['data']
@@ -191,7 +192,7 @@ class CraftyWeb:
         """
 
         if not isinstance(role_id, (int, str)):
-            raise TypeError(f'Expected "role_id" to be of type int or str, but got {type(role_id)} instead')
+            raise TypeError(f'Expected "role_id" to be of type int or str, but got {type(role_id).__name__} instead')
 
         url = f'{APIRoutes.ROLES_URL}/{role_id}/servers'
         return self._make_request('GET', url)['data']
@@ -207,7 +208,7 @@ class CraftyWeb:
         """
 
         if not isinstance(role_id, (int, str)):
-            raise TypeError(f'Expected "role_id" to be of type int or str, but got {type(role_id)} instead')
+            raise TypeError(f'Expected "role_id" to be of type int or str, but got {type(role_id).__name__} instead')
 
         url = f'{APIRoutes.ROLES_URL}/{role_id}/users'
         return self._make_request('GET', url)['data']
@@ -224,7 +225,7 @@ class CraftyWeb:
         """
 
         if not isinstance(role_id, (int, str)):
-            raise TypeError(f'Expected "role_id" to be of type int or str, but got {type(role_id)} instead')
+            raise TypeError(f'Expected "role_id" to be of type int or str, but got {type(role_id).__name__} instead')
 
         url = f'{APIRoutes.ROLES_URL}/{role_id}'
         response = self._make_request('DELETE', url)
@@ -259,9 +260,9 @@ class CraftyWeb:
         """
 
         if not isinstance(role_id, (int, str)):
-            raise TypeError(f'Expected "role_id" to be of type int or str, but got {type(role_id)} instead')
-        if not isinstance(name, str) and name is not None:
-            raise TypeError(f"'name' must be of type string, instead was of type {type(name)}")
+            raise TypeError(f'Expected "role_id" to be of type int or str, but got {type(role_id).__name__} instead')
+        if name is not None and not isinstance(name, str):
+            raise TypeError(f"'name' must be of type string, instead was of type {type(name).__name__}")
         if (server_ids is None and permissions is not None) or (server_ids is not None and permissions is None):
             raise ValueError("Both 'server_ids' and 'permissions' must be either provided or None.")
         elif server_ids is not None and permissions is not None:
@@ -269,14 +270,14 @@ class CraftyWeb:
                 server_ids = [server_ids]
             elif not isinstance(server_ids, list):
                 raise TypeError(f"'server_ids' must either be of type int or a list of int instead was of type "
-                                f"{type(server_ids)}")
+                                f"{type(server_ids).__name__}")
             if isinstance(permissions, str):
                 permissions = [permissions] * len(server_ids)
             elif isinstance(permissions, int):
                 permissions = str(permissions)
             elif not isinstance(permissions, (str, list)):
                 raise TypeError(f"'permissions' must either be of type str or a list of str instead was of type "
-                                f"{type(permissions)}")
+                                f"{type(permissions).__name__}")
             elif len(permissions) != len(server_ids):
                 raise ValueError(
                     '''If 'server_ids' and 'permissions' are both provided as lists, they must have the same length.
@@ -343,6 +344,55 @@ class CraftyWeb:
     #         }
     #     return self._make_request('POST', APIRoutes.SERVERS_URL, data=data)
 
+    # DO NOT USE THIS, IT DOESN'T WORK YET!!!
+    # DO NOT USE THIS, IT DOESN'T WORK YET!!!
+    # DO NOT USE THIS, IT DOESN'T WORK YET!!!
+    def create_server(self, name: str, create_type: str, monitoring_type: str = None,
+                      properties: str = None, stop_command: str = None, log_location: str = None,
+                      crashdetection: bool = None, autostart: bool = None, autostart_delay: int = None,
+                      host: str = None, port: int = None, create_data: str = None):
+
+        if not isinstance(name, str):
+            raise ValueError('"name" is required and must be a string')
+        if properties is not None and not isinstance(properties, str):
+            raise TypeError(f"'properties' must be of type string, instead was of type {type(properties).__name__}")
+
+
+        if monitoring_type == "minecraft_java":
+            if create_type is None:
+                raise ValueError('"create_type" must be provided for "minecraft_java" servers.')
+            if create_type == "custom":
+                if properties is None:
+                    raise ValueError("properties must be provided for custom minecraft_java servers.")
+            elif create_type == "minecraft_java":
+                if create_data is None:
+                    raise ValueError('"create_data" must be provided for minecraft_java servers.')
+            else:
+                if create_data is None:
+                    raise ValueError('"create_data" must be provided for minecraft_bedrock servers.')
+        elif monitoring_type == "minecraft_bedrock":
+            if create_type is None:
+                raise ValueError('"create_type" must be provided for minecraft_bedrock servers.')
+            if create_data is None:
+                raise ValueError('"create_data" must be provided for minecraft_bedrock servers.')
+        elif monitoring_type is None:
+            pass
+        else:
+            raise ValueError('"monitoring_type" must either be "minecraft_java" or "minecraft_bedrock" or be None')
+
+        if monitoring_type and monitoring_type not in ['minecraft_java', 'minecraft_bedrock']:
+            raise ValueError('"monitoring_type" must either be "minecraft_java" or "minecraft_bedrock"')
+
+        if monitoring_type and (not host or not port):
+            raise ValueError(f'"host" and "port" are required for the {monitoring_type} monitoring type')
+
+        if create_type not in ['minecraft_java', 'minecraft_bedrock', 'custom']:
+            raise ValueError('create_type must be one of: "minecraft_java", "minecraft_bedrock", "custom"')
+
+        if create_type == 'custom':
+            # TODO: Check that required custom variables exist
+            pass
+
     def get_server(self, server_id):
         """
         Retrieves information about the server corresponding to the specified server ID.
@@ -355,7 +405,8 @@ class CraftyWeb:
         """
 
         if not isinstance(server_id, (int, str)):
-            raise TypeError(f'Expected "server_id" to be of type int or str, but got {type(server_id)} instead')
+            raise TypeError(f'Expected "server_id" to be of type int or str, but got {type(server_id).__name__} '
+                            f'instead')
 
         url = f'{APIRoutes.SERVERS_URL}/{server_id}'
         return self._make_request('GET', url)['data']
@@ -373,7 +424,8 @@ class CraftyWeb:
         """
 
         if not isinstance(server_id, (int, str)):
-            raise TypeError(f'Expected "server_id" to be of type int or str, but got {type(server_id)} instead')
+            raise TypeError(f'Expected "server_id" to be of type int or str, but got {type(server_id).__name__} '
+                            f'instead')
 
         url = f'{APIRoutes.SERVERS_URL}/{server_id}'
         response = self._make_request('DELETE', url)
@@ -409,7 +461,8 @@ class CraftyWeb:
         """
 
         if not isinstance(server_id, (int, str)):
-            raise TypeError(f'Expected "server_id" to be of type int or str, but got {type(server_id)} instead')
+            raise TypeError(f'Expected "server_id" to be of type int or str, but got {type(server_id).__name__} '
+                            f'instead')
 
         url = f"{APIRoutes.SERVERS_URL}/{server_id}"
         valid_keys = ['server_name', 'path', 'backup_path', 'executable', 'log_path', 'execution_command', 'auto_start',
@@ -438,19 +491,31 @@ class CraftyWeb:
         if action not in valid_actions:
             raise ValueError(f'Invalid action "{action}". Valid actions are: {", ".join(valid_actions)}')
         if not isinstance(server_id, (int, str)):
-            raise TypeError(f'Expected "server_id" to be of type int or str, but got {type(server_id)} instead')
+            raise TypeError(f'Expected "server_id" to be of type int or str, but got {type(server_id).__name__} '
+                            f'instead')
 
         url = f'{APIRoutes.SERVERS_URL}/{server_id}/action/{action}'
         return self._make_request('POST', url)
 
-    # TODO: Test this command
-    def STDIn_command(self, server_id, data):
+    def send_console_command(self, server_id, command):
+        """
+        Sends a console command to the server corresponding to the specified server ID.
+
+        :param server_id: The ID of the server to send the command to.
+        :type server_id: int | str
+        :param command: The command data to send to the server.
+        :type command: str
+        :return: A dictionary containing the response from the server.
+        :rtype: dict
+        :raises TypeError: If the given server ID is not of type int or str.
+        """
 
         if not isinstance(server_id, (int, str)):
-            raise TypeError(f'Expected "server_id" to be of type int or str, but got {type(server_id)} instead')
+            raise TypeError(f'Expected "server_id" to be of type int or str, but got {type(server_id).__name__} '
+                            f'instead')
 
         url = f'{APIRoutes.SERVERS_URL}/{server_id}/stdin'
-        return self._make_request('POST', url, data=data)
+        return self._make_request('POST', url, not_json=command)
 
     def get_server_logs(self, server_id, file=False, colors=False, raw=False, html=False):
         """
@@ -472,7 +537,8 @@ class CraftyWeb:
         """
 
         if not isinstance(server_id, (int, str)):
-            raise TypeError(f'Expected "server_id" to be of type int or str, but got {type(server_id)} instead')
+            raise TypeError(f'Expected "server_id" to be of type int or str, but got {type(server_id).__name__} '
+                            f'instead')
 
         logs_url = f'{APIRoutes.SERVERS_URL}/{server_id}/logs'
 
@@ -495,7 +561,8 @@ class CraftyWeb:
         """
 
         if not isinstance(server_id, (int, str)):
-            raise TypeError(f'Expected "server_id" to be of type int or str, but got {type(server_id)} instead')
+            raise TypeError(f'Expected "server_id" to be of type int or str, but got {type(server_id).__name__} '
+                            f'instead')
 
         url = f'{APIRoutes.SERVERS_URL}/{server_id}/public'
         return self._make_request('GET', url)['data']
@@ -511,7 +578,8 @@ class CraftyWeb:
         """
 
         if not isinstance(server_id, (int, str)):
-            raise TypeError(f'Expected "server_id" to be of type int or str, but got {type(server_id)} instead')
+            raise TypeError(f'Expected "server_id" to be of type int or str, but got {type(server_id).__name__} '
+                            f'instead')
 
         url = f'{APIRoutes.SERVERS_URL}/{server_id}/stats'
         return self._make_request('GET', url)['data']
@@ -528,7 +596,8 @@ class CraftyWeb:
         """
 
         if not isinstance(server_id, (int, str)):
-            raise TypeError(f'Expected "server_id" to be of type int or str, but got {type(server_id)} instead')
+            raise TypeError(f'Expected "server_id" to be of type int or str, but got {type(server_id).__name__} '
+                            f'instead')
 
         url = f'{APIRoutes.SERVERS_URL}/{server_id}/users'
 
@@ -548,7 +617,8 @@ class CraftyWeb:
     def create_schedule(self, server_id, data):
 
         if not isinstance(server_id, (int, str)):
-            raise TypeError(f'Expected "server_id" to be of type int or str, but got {type(server_id)} instead')
+            raise TypeError(f'Expected "server_id" to be of type int or str, but got {type(server_id).__name__} '
+                            f'instead')
 
         url = f'{APIRoutes.SERVERS_URL}/{server_id}/tasks'
         return self._make_request('POST', url, data=data)
@@ -557,7 +627,7 @@ class CraftyWeb:
 
         for arg, arg_name in [(server_id, 'server_id'), (task_id, 'task_id')]:
             if not isinstance(arg, (int, str)):
-                raise TypeError(f'Expected "{arg_name}" to be of type int or str, but got {type(arg)} instead')
+                raise TypeError(f'Expected "{arg_name}" to be of type int or str, but got {type(arg).__name__} instead')
 
         url = f'{APIRoutes.SERVERS_URL}/{server_id}/tasks/{task_id}'
         return self._make_request('PATCH', url, data=data)
@@ -576,7 +646,7 @@ class CraftyWeb:
 
         for arg, arg_name in [(server_id, 'server_id'), (task_id, 'task_id')]:
             if not isinstance(arg, (int, str)):
-                raise TypeError(f'Expected "{arg_name}" to be of type int or str, but got {type(arg)} instead')
+                raise TypeError(f'Expected "{arg_name}" to be of type int or str, but got {type(arg).__name__} instead')
 
         url = f'{APIRoutes.SERVERS_URL}/{server_id}/tasks/{task_id}'
         response = self._make_request('DELETE', url)
@@ -658,7 +728,7 @@ class CraftyWeb:
         """
 
         if not isinstance(user_id, (int, str)):
-            raise TypeError(f'Expected "user_id" to be of type int or str, but got {type(user_id)} instead')
+            raise TypeError(f'Expected "user_id" to be of type int or str, but got {type(user_id).__name__} instead')
 
         url = f'{APIRoutes.USERS_URL}/{user_id}'
         return self._make_request('GET', url)['data']
@@ -674,7 +744,7 @@ class CraftyWeb:
         """
 
         if not isinstance(user_id, (int, str)):
-            raise TypeError(f'Expected "user_id" to be of type int or str, but got {type(user_id)} instead')
+            raise TypeError(f'Expected "user_id" to be of type int or str, but got {type(user_id).__name__} instead')
 
         url = f'{APIRoutes.USERS_URL}/{user_id}'
         response = self._make_request('DELETE', url)
@@ -683,7 +753,7 @@ class CraftyWeb:
         return response
 
     def modify_user(self, user_id, username=None, password=None, email=None, enabled=None, superuser=None, lang=None,
-                    hints=None, roles=None, permissions=None):
+                    hints=None, roles=None, permissions=None, remove_roles=False):
         """
         Modifies the properties of the user corresponding to the given user ID.
 
@@ -709,36 +779,39 @@ class CraftyWeb:
             should be a three character string for the permissions of 'SERVER_CREATION', 'USER_CONFIG', and
             'ROLES_CONFIG' respectively.
         :type permissions: dict, optional
+        :param remove_roles: If True, removes any matching roles from the user if they already have it, default is False
+        :type remove_roles: bool, optional
         :return: A dictionary containing the response from the server.
         :rtype: dict
         :raises AccessDenied: If the user does not have the necessary permissions to modify the user.
         """
 
         if not isinstance(user_id, (int, str)):
-            raise TypeError(f'Expected "user_id" to be of type int or str, but got {type(user_id)} instead')
+            raise TypeError(f'Expected "user_id" to be of type int or str, but got {type(user_id).__name__} instead')
         if username is not None and not isinstance(username, str):
-            raise TypeError(f"Expected 'username' to be of type str, but got {type(username)} instead")
+            raise TypeError(f"Expected 'username' to be of type str, but got {type(username).__name__} instead")
         if password is not None and not isinstance(password, str):
-            raise TypeError(f"Expected 'password' to be of type str, but got {type(password)} instead")
+            raise TypeError(f"Expected 'password' to be of type str, but got {type(password).__name__} instead")
         if email is not None and not isinstance(email, str):
-            raise TypeError(f"Expected 'email' to be of type str, but got {type(email)} instead")
+            raise TypeError(f"Expected 'email' to be of type str, but got {type(email).__name__} instead")
         if enabled is not None and not isinstance(enabled, bool):
-            raise TypeError(f"Expected 'enabled' to be of type bool, but got {type(enabled)} instead")
+            raise TypeError(f"Expected 'enabled' to be of type bool, but got {type(enabled).__name__} instead")
         if superuser is not None and not isinstance(superuser, bool):
-            raise TypeError(f"Expected 'superuser' to be of type bool, but got {type(superuser)} instead")
+            raise TypeError(f"Expected 'superuser' to be of type bool, but got {type(superuser).__name__} instead")
         if lang is not None and not isinstance(lang, str):
-            raise TypeError(f"Expected 'lang' to be of type str, but got {type(lang)} instead")
+            raise TypeError(f"Expected 'lang' to be of type str, but got {type(lang).__name__} instead")
         if hints is not None and not isinstance(hints, bool):
-            raise TypeError(f"Expected 'hints' to be of type bool, but got {type(hints)} instead")
+            raise TypeError(f"Expected 'hints' to be of type bool, but got {type(hints).__name__} instead")
         if roles is not None:
             if isinstance(roles, (int, str)):
                 roles = [roles]
             if not isinstance(roles, (int, str, list)):
-                raise TypeError(f"Expected 'roles' to be of type list[int], but got {type(roles)} instead")
+                raise TypeError(f"Expected 'roles' to be of type list[int], but got {type(roles).__name__} instead")
             roles = [str(role) for role in roles]
         if permissions is not None:
             if not isinstance(permissions, dict):
-                raise TypeError(f"Expected 'permissions' to be of type dict, but got {type(permissions)} instead")
+                raise TypeError(f"Expected 'permissions' to be of type dict, but got {type(permissions).__name__} "
+                                f"instead")
             if 'enabled' not in permissions or 'name' not in permissions or 'quantity' not in permissions:
                 raise ValueError("permissions dictionary must contain 'enabled', 'name', and 'quantity' keys")
             if not isinstance(permissions["enabled"], bool):
@@ -747,6 +820,18 @@ class CraftyWeb:
                 raise TypeError("The 'name' key in the permissions dictionary must be a string.")
             if not isinstance(permissions["quantity"], int):
                 raise TypeError("The 'quantity' key in the permissions dictionary must be an integer.")
+
+        # Check to see if the user already has any of the passed roles, if so remove them from the new roles
+        if not remove_roles and roles:
+            prev_roles = self.get_user(user_id)['roles']
+            new_roles = []
+            for role in roles:
+                if str(role) not in [str(prev_role['role_id']) for prev_role in prev_roles]:
+                    new_roles.append(str(role))
+                else:
+                    print(f'User {user_id} already has role {role}. If you intend on removing it, set parameter '
+                          f'"remove_roles" to True.')
+            roles = new_roles if new_roles else None
 
         data = {
             'username': username,
@@ -775,7 +860,7 @@ class CraftyWeb:
         """
 
         if not isinstance(user_id, (int, str)):
-            raise TypeError(f'Expected "user_id" to be of type int or str, but got {type(user_id)} instead')
+            raise TypeError(f'Expected "user_id" to be of type int or str, but got {type(user_id).__name__} instead')
 
         url = f'{APIRoutes.USERS_URL}/{user_id}/permissions'
         return self._make_request('GET', url)['data']
@@ -791,7 +876,7 @@ class CraftyWeb:
         """
 
         if not isinstance(user_id, (int, str)):
-            raise TypeError(f'Expected "user_id" to be of type int or str, but got {type(user_id)} instead')
+            raise TypeError(f'Expected "user_id" to be of type int or str, but got {type(user_id).__name__} instead')
 
         url = f'{APIRoutes.USERS_URL}/{user_id}/pfp'
         return self._make_request('GET', url)['data']
@@ -811,7 +896,7 @@ class CraftyWeb:
 
     # Test Functions
 
-    # TODO: Delete this
+    # For testing purposes
     def test_foo(self, method, url, data=None):
         return self._make_request(method, url, data=data)
 
@@ -832,10 +917,13 @@ class CraftyWeb:
                          'new_task', 'patch_task']
 
         if not isinstance(schema, str):
-            raise TypeError(f"Expected `schema` to be a string, but got {type(schema)}")
+            raise TypeError(f"Expected `schema` to be a string, but got {type(schema).__name__}")
 
         if schema not in valid_schemas:
             raise ValueError(f"Invalid schema. Must be one of the following: {valid_schemas}")
 
         url = f'{APIRoutes.SCHEMA_URL}/{schema}'
-        return self._make_request('GET', url)
+        response = self._make_request('GET', url)
+        if response['status'] == 'ok':
+            print(json.dumps(response['data'], indent=4))
+        return response
