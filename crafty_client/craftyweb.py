@@ -7,14 +7,14 @@ from crafty_client.static.routes import APIRoutes
 
 class CraftyWeb:
 
-    def __init__(self, url, api_token, verify_ssl=False, response_statements=False, debug=False):
+    def __init__(self, url, api_token, verify_ssl=False, server_response=True, debug=False):
         """ The main class for communicating with the Crafty Web API"""
         self.url = url
         self.token = api_token
         self.verify_ssl = verify_ssl
         self.headers = {'Authorization': f'Bearer {self.token}', 'Content-Type': 'application/json'}
         self.debug = debug
-        self.response_statements = response_statements
+        self.server_response = server_response
 
     # TODO: Verify all these errors still exist (mostly copied from API V1)
     def _check_errors(self, response_dict):
@@ -39,7 +39,7 @@ class CraftyWeb:
         else:
             pass
 
-    def _make_request(self, method, api_route, params=None, data=None, not_json=None):
+    def _make_request(self, method, api_route, params=None, data=None, not_json=None, silence_response=False):
         endpoint = f'{self.url}{api_route}'
 
         with requests.request(method, endpoint, verify=self.verify_ssl, headers=self.headers, params=params,
@@ -47,7 +47,7 @@ class CraftyWeb:
             if self.debug:
                 print(f'Debug: \n{route.text}')
             response_dict = route.json()
-            if self.response_statements:
+            if self.server_response and not silence_response:
                 print(response_dict)
 
             status = response_dict.get('status', None)
@@ -57,6 +57,22 @@ class CraftyWeb:
 
             self._check_errors({'status': status, 'data': data, 'error': error, 'info': info})
             return {'status': status, 'data': data, 'error': error, 'info': info}
+
+    def _silence_response(self):
+        class SilenceResponse:
+            def __init__(self, obj):
+                self.obj = obj
+                self.original_state = obj.server_response
+
+            def __enter__(self):
+                obj = self.obj
+                obj.server_response = False
+
+            def __exit__(self, type, value, traceback):
+                obj = self.obj
+                obj.server_response = self.original_state
+
+        return SilenceResponse(self)
 
     def get_token(self, username, password=None, password_path=None):
         """
@@ -437,43 +453,137 @@ class CraftyWeb:
             print(f'Successfully Removed Server with server ID: {server_id}')
         return response
 
-    # TODO: Fix this docstring
-    def modify_server(self, server_id, data):
+    # TODO: Check types
+    def modify_server(self, server_id, server_name=None, path=None, backup_path=None, executable=None, log_path=None,
+                      execution_command=None, java_selection=None, auto_start=None, auto_start_delay=None, crash_detection=None,
+                      stop_command=None, executable_update_url=None, server_ip=None, server_port=None,
+                      logs_delete_after=None, ignored_exits=None, show_status=None, shutdown_timeout=None):
         """
-        Modify a server with the given server_id using the specified data.
+        Modifies a server with the given server ID using the specified data.
 
-        Args:
-            server_id (int): The ID of the server to modify.
-            data (dict): A dictionary of changes to make to the server. Possible keys include:
-                - server_name (str): The name of the server.
-                - path (str): The path to the server files.
-                - backup_path (str): The path to the backup files.
-                - executable (str): The name of the server executable.
-                - log_path (str): The path to the server logs.
-                - execution_command (str): The command to start the server.
-                - auto_start (bool): Whether the server should start automatically.
-                - auto_start_delay (int): The delay (in seconds) before automatic startup.
-                - crash_detection (bool): Whether to detect server crashes.
-                - stop_command (str): The command to stop the server.
-                - executable_update_url (str): The URL to update the server executable.
-                - server_ip (str): The IP address of the server.
-                - server_port (int): The port of the server.
-                - logs_delete_after (int): The number of days to keep server logs.
-                - type (str): The type of server (e.g. 'minecraft_java', 'minecraft_bedrock', etc.).
-                - show_status (bool): Whether to show the server status in the dashboard.
-                - shutdown_timeout (int): The number of seconds to wait before shutting down the server.
+        :param server_id: The ID of the server to modify.
+        :type server_id: int or str
+        :param server_name: The name of the server. Default is None.
+        :type server_name: str, optional
+        :param path: The path to the server files. Default is None.
+        :type path: str, optional
+        :param backup_path: The path to the backup files. Default is None.
+        :type backup_path: str, optional
+        :param executable: The name of the server executable. Default is None.
+        :type executable: str, optional
+        :param log_path: The path to the server logs. Default is None.
+        :type log_path: str, optional
+        :param execution_command: The command to start the server. Default is None.
+        :type execution_command: str, optional
+        :param java_selection: The type of server (e.g. 'minecraft_java', 'minecraft_bedrock', etc.). Default is None.
+        :type java_selection: str, optional
+        :param auto_start: Whether the server should start automatically. Default is None.
+        :type auto_start: bool, optional
+        :param auto_start_delay: The delay (in seconds) before automatic startup. Default is None.
+        :type auto_start_delay: int, optional
+        :param crash_detection: Whether to detect server crashes. Default is None.
+        :type crash_detection: bool, optional
+        :param stop_command: The command to stop the server. Default is None.
+        :type stop_command: str, optional
+        :param executable_update_url: The URL to update the server executable. Default is None.
+        :type executable_update_url: str, optional
+        :param server_ip: The IP address of the server. Default is None.
+        :type server_ip: str, optional
+        :param server_port: The port of the server. Default is None.
+        :type server_port: int, optional
+        :param logs_delete_after: The number of days to keep server logs. Default is None.
+        :type logs_delete_after: int, optional
+        :param ignored_exits: # TODO write what this does
+        :type ignored_exits: str, optional
+        :param show_status: Whether to show the server status in the dashboard. Default is None.
+        :type show_status: bool, optional
+        :param shutdown_timeout: The number of seconds to wait before shutting down the server. Default is None.
+        :type shutdown_timeout: int, optional
+        :return: A dictionary containing the response from the server.
+        :rtype: dict
+        :raises ValueError: If server_id is not an integer.
+        :raises AccessDenied: If the user does not have the necessary permissions to modify the server.
         """
 
         if not isinstance(server_id, (int, str)):
             raise TypeError(f'Expected "server_id" to be of type int or str, but got {type(server_id).__name__} '
                             f'instead')
+        if server_name is not None and not isinstance(server_name, str):
+            raise TypeError(f'Expected "server_name" to be of type str or None, but got {type(server_name).__name__} '
+                            f'instead')
+        if path is not None and not isinstance(path, str):
+            raise TypeError(f'Expected "path" to be of type str or None, but got {type(path).__name__} instead')
+        if backup_path is not None and not isinstance(backup_path, str):
+            raise TypeError(f'Expected "backup_path" to be of type str or None, but got {type(backup_path).__name__} '
+                            f'instead')
+        if executable is not None and not isinstance(executable, str):
+            raise TypeError(f'Expected "executable" to be of type str or None, but got {type(executable).__name__} '
+                            f'instead')
+        if log_path is not None and not isinstance(log_path, str):
+            raise TypeError(f'Expected "log_path" to be of type str or None, but got {type(log_path).__name__} instead')
+        if execution_command is not None and not isinstance(execution_command, str):
+            raise TypeError(f'Expected "execution_command" to be of type str or None, but got '
+                            f'{type(execution_command).__name__} instead')
+        if java_selection is not None and not isinstance(java_selection, str):
+            raise TypeError(f'Expected "java_selection" to be of type str or None, but got '
+                            f'{type(java_selection).__name__} instead')
+        if auto_start is not None and not isinstance(auto_start, bool):
+            raise TypeError(f'Expected "auto_start" to be of type bool or None, but got {type(auto_start).__name__} '
+                            f'instead')
+        if auto_start_delay is not None and not isinstance(auto_start_delay, int):
+            raise TypeError(f'Expected "auto_start_delay" to be of type int or None, but got '
+                            f'{type(auto_start_delay).__name__} instead')
+        if crash_detection is not None and not isinstance(crash_detection, bool):
+            raise TypeError(f'Expected "crash_detection" to be of type bool or None, but got '
+                            f'{type(crash_detection).__name__} instead')
+        if stop_command is not None and not isinstance(stop_command, str):
+            raise TypeError(f'Expected "stop_command" to be of type str or None, but got {type(stop_command).__name__} '
+                            f'instead')
+        if executable_update_url is not None and not isinstance(executable_update_url, str):
+            raise TypeError(f'Expected "executable_update_url" to be of type str or None, but got '
+                            f'{type(executable_update_url).__name__} instead')
+        if server_ip is not None and not isinstance(server_ip, str):
+            raise TypeError(f'Expected "server_ip" to be of type str or None, but got {type(server_ip).__name__} '
+                            f'instead')
+        if server_port is not None and not isinstance(server_port, int):
+            raise TypeError(f'Expected "server_port" to be of type int or None, but got {type(server_port).__name__} '
+                            f'instead')
+        if logs_delete_after is not None and not isinstance(logs_delete_after, int):
+            raise TypeError(f'Expected "logs_delete_after" to be of type int or None, but got '
+                            f'{type(logs_delete_after).__name__} instead')
+        if ignored_exits is not None and not isinstance(ignored_exits, str):
+            raise TypeError(f'Expected "ignored_exits" to be of type int or None, but got '
+                            f'{type(ignored_exits).__name__} instead')
+        if show_status is not None and not isinstance(show_status, bool):
+            raise TypeError(f'Expected "show_status" to be of type bool or None, but got {type(show_status).__name__} '
+                            f'instead')
+        if shutdown_timeout is not None and not isinstance(shutdown_timeout, int):
+            raise TypeError(f'Expected "shutdown_timeout" to be of type int or None, but got '
+                            f'{type(shutdown_timeout).__name__} instead')
 
         url = f"{APIRoutes.SERVERS_URL}/{server_id}"
-        valid_keys = ['server_name', 'path', 'backup_path', 'executable', 'log_path', 'execution_command', 'auto_start',
-                      'auto_start_delay', 'crash_detection', 'stop_command', 'executable_update_url', 'server_ip',
-                      'server_port', 'logs_delete_after', 'type', 'show_status', 'shutdown_timeout']
-        payload = {key: data[key] for key in valid_keys if key in data}
-        return self._make_request('PATCH', url, data=payload)
+        data = {
+            "server_name": server_name,
+            "path": path,
+            "backup_path": backup_path,
+            "executable": executable,
+            "log_path": log_path,
+            "execution_command": execution_command,
+            "java_selection": java_selection,
+            "auto_start": auto_start,
+            "auto_start_delay": auto_start_delay,
+            "crash_detection": crash_detection,
+            "stop_command": stop_command,
+            "executable_update_url": executable_update_url,
+            "server_ip": server_ip,
+            "server_port": server_port,
+            "logs_delete_after": logs_delete_after,
+            "ignored_exits": ignored_exits,
+            "show_status": show_status,
+            "shutdown_timeout": shutdown_timeout
+        }
+        data = {key: value for key, value in data.items() if value is not None}
+        return self._make_request('PATCH', url, data=data)
 
     def send_server_action(self, server_id, action):
         """
@@ -901,25 +1011,35 @@ class CraftyWeb:
     def test_foo(self, method, url, data=None):
         return self._make_request(method, url, data=data)
 
+    def get_json_schemas(self):
+        """
+        Retrieves a list of all valid JSON schemas from Crafty Controller.
+        :return: A list containing all valid JSON schemas
+        :rtype: list
+        """
+        url = f'{APIRoutes.SCHEMA_URL}'
+        return self._make_request('GET', url)['data']
+
     # TODO: Add in default schema values with 'https://json-schema-faker.js.org/'
     def json_schema(self, schema):
         """
         Retrieves a JSON schema for a given endpoint.
 
-        :param schema: A string representing the schema to retrieve.
-                       Must be one of ['login', 'modify_role', 'create_role', 'server_patch', 'new_server',
-                       'user_patch', 'new_user'].
+        :param schema: A string representing the schema to retrieve. Must be one of: ['login', 'modify_role',
+            'create_role', 'server_patch', 'new_server', 'user_patch', 'new_user', or 'task_patch'].
+            If this list is out-of-date, an up-to-date list of valid schemas can be retrieved using `get_json_schemas()`
+        :type schema: str
         :return: A dictionary representing the JSON schema for the given endpoint.
+        :rtype: dict
         :raises ValueError: If the input `schema` is not a valid option.
         :raises TypeError: If the input 'schema' is not a string.
         """
 
-        valid_schemas = ['login', 'modify_role', 'create_role', 'server_patch', 'new_server', 'user_patch', 'new_user',
-                         'new_task', 'patch_task']
+        with self._silence_response():
+            valid_schemas = self.get_json_schemas()
 
         if not isinstance(schema, str):
             raise TypeError(f"Expected `schema` to be a string, but got {type(schema).__name__}")
-
         if schema not in valid_schemas:
             raise ValueError(f"Invalid schema. Must be one of the following: {valid_schemas}")
 
