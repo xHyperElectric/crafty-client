@@ -39,7 +39,7 @@ class CraftyWeb:
         else:
             pass
 
-    def _make_request(self, method, api_route, params=None, data=None, not_json=None, silence_response=False):
+    def _make_request(self, method, api_route, params=None, data=None, not_json=None):
         endpoint = f'{self.url}{api_route}'
 
         with requests.request(method, endpoint, verify=self.verify_ssl, headers=self.headers, params=params,
@@ -47,7 +47,7 @@ class CraftyWeb:
             if self.debug:
                 print(f'Debug: \n{route.text}')
             response_dict = route.json()
-            if self.server_response and not silence_response:
+            if self.server_response:
                 print(response_dict)
 
             status = response_dict.get('status', None)
@@ -698,6 +698,7 @@ class CraftyWeb:
         url = f'{APIRoutes.SERVERS_URL}/{server_id}/stats'
         return self._make_request('GET', url)['data']
 
+    # TODO: Test to see if this works
     def get_server_users(self, server_id):
         """
         Retrieves all the users with access to the server corresponding to the specified server ID.
@@ -713,13 +714,12 @@ class CraftyWeb:
                             f'instead')
 
         url = f'{APIRoutes.SERVERS_URL}/{server_id}/users'
-
-        # TODO: Add this:
         users = self._make_request('GET', url)['data']
 
         user_dict = {}
         for user in users:
-            user_data = self.get_user(user)
+            with self._silence_response():
+                user_data = self.get_user(user)
             user_dict[user_data['user_id']] = user_data['username']
 
         return user_dict
@@ -805,7 +805,8 @@ class CraftyWeb:
         """
 
         if roles is not None:
-            roles_list = self.get_all_roles()
+            with self._silence_response():
+                roles_list = self.get_all_roles()
             valid_roles = [str(role['role_id']) for role in roles_list or []]
 
             roles = [str(role) for role in roles or []]
@@ -934,7 +935,8 @@ class CraftyWeb:
 
         # Check to see if the user already has any of the passed roles, if so remove them from the new roles
         if not remove_roles and roles:
-            prev_roles = self.get_user(user_id)['roles']
+            with self._silence_response():
+                prev_roles = self.get_user(user_id)['roles']
             new_roles = []
             for role in roles:
                 if str(role) not in [str(prev_role['role_id']) for prev_role in prev_roles]:
