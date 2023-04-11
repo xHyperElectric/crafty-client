@@ -724,8 +724,19 @@ class CraftyWeb:
 
         return user_dict
 
-    # TODO: Complete this and the next
+    # TODO: Complete this one and the next one
     def create_schedule(self, server_id, data):
+        """
+        Creates a scheduled task for the server corresponding to the specified server ID.
+
+        :param server_id: The ID of the server to create the task for.
+        :type server_id: int | str
+        :param data: A dictionary containing the data for the scheduled task.
+        :type data: dict
+        :return: A dictionary containing the response from the API.
+        :rtype: dict
+        :raises AccessDenied: If the user does not have permission to create a scheduled task for the server.
+        """
 
         if not isinstance(server_id, (int, str)):
             raise TypeError(f'Expected "server_id" to be of type int or str, but got {type(server_id).__name__} '
@@ -735,6 +746,19 @@ class CraftyWeb:
         return self._make_request('POST', url, data=data)
 
     def modify_schedule(self, server_id, task_id, data):
+        """
+        Modifies an existing task schedule for the server corresponding to the specified server ID and task ID.
+
+        :param server_id: The ID of the server for which the task schedule needs to be modified.
+        :type server_id: int | str
+        :param task_id: The ID of the task schedule to be modified.
+        :type task_id: int | str
+        :param data: The data to update the task schedule with.
+        :type data: dict
+        :return: A dictionary containing the updated task schedule.
+        :rtype: dict
+        :raises AccessDenied: If the user does not have permission to modify the task schedule.
+        """
 
         for arg, arg_name in [(server_id, 'server_id'), (task_id, 'task_id')]:
             if not isinstance(arg, (int, str)):
