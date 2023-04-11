@@ -493,7 +493,7 @@ class CraftyWeb:
         :type server_port: int, optional
         :param logs_delete_after: The number of days to keep server logs. Default is None.
         :type logs_delete_after: int, optional
-        :param ignored_exits: A comma separated string of exit codes to ignore for crash detection. # TODO: Check this
+        :param ignored_exits: A comma separated string of exit codes to ignore for crash detection.
         :type ignored_exits: str, optional
         :param show_status: Whether to show the server status in the dashboard. Default is None.
         :type show_status: bool, optional
